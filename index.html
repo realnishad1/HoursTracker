@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Sora:wght@500;600&display=swap" rel="stylesheet" />
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -193,12 +194,27 @@
       align-items: stretch;
     }
 
+    .home-right {
+      display: grid;
+      gap: 18px;
+    }
+
     .summary-grid {
       display: grid;
       gap: 18px;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       grid-auto-rows: 1fr;
       height: var(--home-panel-height);
+    }
+
+    .heatmap-card {
+      margin-top: 18px;
+      height: 320px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      background: var(--paper);
     }
 
     .summary-card {
@@ -248,11 +264,44 @@
       padding: 14px 16px;
     }
 
+    .panel.totals-panel {
+      height: 320px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .totals-list {
+      display: grid;
+      gap: 10px;
+      flex: 1;
+      overflow: auto;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      background: var(--paper);
+      font-size: 13px;
+    }
+
+    .totals-row span {
+      color: var(--muted);
+    }
+
     .entry-actions {
       margin-top: auto;
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+    }
+
+    .table-panel {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .panel h4 {
@@ -449,6 +498,26 @@
       font-size: 13px;
     }
 
+    .settings-table th.drag-col,
+    .settings-table td.drag-cell {
+      width: 28px;
+    }
+
+    .drag-handle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: var(--muted);
+      cursor: grab;
+      user-select: none;
+      padding: 4px 2px;
+    }
+
+    .drag-row.dragging {
+      opacity: 0.5;
+    }
+
     .settings-table th,
     .settings-table td {
       border-bottom: 1px solid var(--line);
@@ -466,6 +535,28 @@
       .home-grid { grid-template-columns: 1fr; }
       .summary-grid { height: auto; grid-auto-rows: auto; }
       .panel.entry-panel { height: auto; }
+    }
+
+    @media (max-width: 760px) {
+      :root { --home-panel-height: auto; }
+      header { padding: 16px 16px 6px; }
+      main { padding: 8px 16px 32px; }
+      .tabs-toggle { display: none; }
+      .tabs-bar { height: auto; padding: 6px 16px 10px; }
+      .tabs-row {
+        position: static;
+        max-width: none;
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+        overflow-x: auto;
+        padding-bottom: 6px;
+        gap: 12px;
+      }
+      .tab-link { font-size: 11px; letter-spacing: 0.08em; }
+      .heatmap-card { height: 240px; }
+      .panel.totals-panel { height: 240px; }
+      .logs-table, .settings-table { min-width: 720px; }
     }
   </style>
 </head>
@@ -498,49 +589,57 @@
         <div class="home-grid">
           <div>
             <div class="summary-grid" id="summary-hours"></div>
+            <div class="heatmap-card" id="heatmap"></div>
           </div>
-          <div class="panel entry-panel">
-            <h4>Add entry</h4>
-            <div class="field">
-              <label for="log-type">Log type</label>
-              <select id="log-type">
-                <option value="volunteer">Volunteering</option>
-                <option value="shadow">Shadowing</option>
-                <option value="research">Research</option>
-                <option value="activities">Activities</option>
-              </select>
+          <div class="home-right">
+            <div class="panel entry-panel">
+              <h4>Add entry</h4>
+              <div class="field">
+                <label for="log-type">Log type</label>
+                <select id="log-type">
+                  <option value="volunteer">Volunteering</option>
+                  <option value="shadow">Shadowing</option>
+                  <option value="research">Research</option>
+                  <option value="activities">Activities</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="log-date">Date</label>
+                <input type="date" id="log-date" />
+              </div>
+
+              <div class="field">
+                <label for="log-category">Experience name</label>
+                <select id="log-category"></select>
+              </div>
+
+              <div class="field">
+                <label for="log-hours">Hours</label>
+                <input type="number" step="0.25" id="log-hours" placeholder="2" />
+              </div>
+
+              <div class="field">
+                <label for="log-notes">Notes (optional)</label>
+                <input type="text" id="log-notes" placeholder="Assisted with intake" />
+              </div>
+
+              <div class="entry-actions">
+                <button class="btn btn-primary" id="save-entry">Save entry</button>
+                <button class="btn btn-ghost" id="cancel-edit" style="display:none;">Cancel edit</button>
+              </div>
             </div>
 
-            <div class="field">
-              <label for="log-date">Date</label>
-              <input type="date" id="log-date" />
-            </div>
-
-            <div class="field">
-              <label for="log-category">Experience name</label>
-              <select id="log-category"></select>
-            </div>
-
-            <div class="field">
-              <label for="log-hours">Hours</label>
-              <input type="number" step="0.25" id="log-hours" placeholder="2" />
-            </div>
-
-            <div class="field">
-              <label for="log-notes">Notes (optional)</label>
-              <input type="text" id="log-notes" placeholder="Assisted with intake" />
-            </div>
-
-            <div class="entry-actions">
-              <button class="btn btn-primary" id="save-entry">Save entry</button>
-              <button class="btn btn-ghost" id="cancel-edit" style="display:none;">Cancel edit</button>
+            <div class="panel totals-panel">
+              <h4>Experience hours</h4>
+              <div class="totals-list" id="experience-totals"></div>
             </div>
           </div>
         </div>
       </section>
 
       <section id="view-log" class="view">
-        <div class="panel">
+        <div class="panel table-panel">
           <div class="log-header">
             <div>
               <h2 id="log-title">Volunteering</h2>
@@ -572,13 +671,14 @@
       </section>
 
       <section id="view-settings" class="view">
-        <div class="panel">
+        <div class="panel table-panel">
           <h4>Settings</h4>
-          <div class="muted" style="margin-bottom:10px;">Experience list for all logs.</div>
+          <div class="muted" style="margin-bottom:10px;">Experience list for all logs. Drag to set custom order.</div>
 
           <table class="settings-table" id="experience-table">
             <thead>
               <tr>
+                <th class="drag-col"></th>
                 <th>Experience name</th>
                 <th>Location</th>
                 <th>Key info / description</th>
@@ -614,9 +714,11 @@
     </main>
   </div>
 
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
   <script>
     const STORAGE_KEY = "tracker_entries_v3";
     const SETTINGS_KEY = "tracker_settings_v3";
+    const MAPBOX_TOKEN = "[key]";
 
     const LOG_LABELS = {
       volunteer: "Volunteering",
@@ -637,24 +739,27 @@
       theme: "forest"
     };
 
-    // --- AZURE INTEGRATION START ---
+    // --- AZURE CLOUD SYNC ---
     async function syncFromCloud() {
       lastSavedEl.textContent = "Syncing...";
       try {
         const response = await fetch('/api/saveData');
         if (response.ok) {
           const cloudData = await response.json();
-          // Merge cloud data into local state
+          
+          // Update state and settings if cloud data exists
           if (cloudData.entries) state = { ...structuredClone(DEFAULT_DATA), ...cloudData.entries };
           if (cloudData.settings) settings = { ...structuredClone(DEFAULT_SETTINGS), ...cloudData.settings };
           
-          // Re-render UI with cloud data
+          // Re-render all UI components with cloud data
           renderSummary();
+          renderExperienceTotals();
           renderLogHeader();
           renderLogTable();
           renderExperienceOptions();
           renderExperienceRows();
           applyTheme(settings.theme);
+          refreshHeatmap();
           
           lastSavedEl.textContent = "Cloud Synced";
         }
@@ -663,13 +768,13 @@
         console.warn("Cloud sync failed, using local storage.", err);
       }
     }
-    // --- AZURE INTEGRATION END ---
 
     let state = loadEntries();
     let settings = loadSettings();
     let activeTab = "volunteer";
     let editIndex = null;
     let sortState = { key: "date", dir: "desc" };
+    let settingsSaveTimer = null;
 
     const lastSavedEl = document.getElementById("last-saved");
     const logBodyEl = document.getElementById("log-body");
@@ -687,6 +792,14 @@
     const themeSelect = document.getElementById("theme-select");
     const sortDateBtn = document.getElementById("sort-date");
     const sortExpBtn = document.getElementById("sort-exp");
+    const heatmapEl = document.getElementById("heatmap");
+    const experienceTotalsEl = document.getElementById("experience-totals");
+
+    let heatmapMap = null;
+    let heatmapSourceId = "entry-heat";
+    let heatmapReady = false;
+    let pendingHeatmapData = null;
+    let boundaryCache = {};
 
     function loadEntries() {
       try {
@@ -710,12 +823,10 @@
       }
     }
 
-    // UPDATED FOR AZURE
+    // UPDATED FOR AZURE CLOUD STORAGE
     async function persistEntries() {
-      // Keep local storage for backup
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      lastSavedEl.textContent = "Saving to Cloud...";
-
+      lastSavedEl.textContent = "Syncing...";
       try {
         await fetch('/api/saveData', {
           method: 'POST',
@@ -724,11 +835,11 @@
         });
         lastSavedEl.textContent = "Saved " + new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
       } catch (err) {
-        lastSavedEl.textContent = "Saved locally (Offline)";
+        lastSavedEl.textContent = "Saved locally";
       }
     }
 
-    // UPDATED FOR AZURE
+    // UPDATED FOR AZURE CLOUD STORAGE
     async function persistSettings() {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
       try {
@@ -738,8 +849,196 @@
           body: JSON.stringify({ type: 'settings', payload: settings })
         });
       } catch (err) {
-        console.warn("Settings saved locally only.");
+        console.warn("Settings synced locally only.");
       }
+    }
+
+    function isVirtualLocation(value) {
+      if (!value) return false;
+      const v = value.toLowerCase();
+      return v.includes("virtual") || v.includes("remote") || v.includes("online");
+    }
+
+    function resolveEntryLocation(entry) {
+      if (entry.location) return entry.location;
+      const exp = (settings.experiences || []).find(item => item.name === entry.category);
+      return exp ? exp.location : "";
+    }
+
+    function getBoundaryCache() {
+      try {
+        return JSON.parse(localStorage.getItem("tracker_boundary_cache_v1") || "{}");
+      } catch {
+        return {};
+      }
+    }
+
+    function setBoundaryCache(cache) {
+      localStorage.setItem("tracker_boundary_cache_v1", JSON.stringify(cache));
+    }
+
+    function normalizeCityName(value) {
+      return value
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-");
+    }
+
+    function parseLocation(value) {
+      if (!value || !value.includes(",")) return null;
+      const parts = value.split(",").map(v => v.trim()).filter(Boolean);
+      if (parts.length < 2) return null;
+      const city = parts[0];
+      const state = parts[1].slice(0, 2).toLowerCase();
+      return { city, state };
+    }
+
+    async function fetchCityBoundary(city, state) {
+      const slug = normalizeCityName(city);
+      const cacheKey = `${state}-${slug}`;
+      boundaryCache = boundaryCache && Object.keys(boundaryCache).length ? boundaryCache : getBoundaryCache();
+      if (boundaryCache[cacheKey]) return boundaryCache[cacheKey];
+      const url = `https://raw.githubusercontent.com/generalpiston/geojson-us-city-boundaries/master/cities/${state}/${slug}.json`;
+      const res = await fetch(url);
+      if (!res.ok) return null;
+      const data = await res.json();
+      const feature = data.type === "Feature" ? data : (data.features && data.features[0]);
+      if (!feature) return null;
+      boundaryCache[cacheKey] = feature;
+      setBoundaryCache(boundaryCache);
+      return feature;
+    }
+
+    async function buildHeatmapData() {
+      const counts = {};
+      Object.values(state).forEach(entries => {
+        entries.forEach(entry => {
+          const loc = resolveEntryLocation(entry);
+          if (!loc || isVirtualLocation(loc)) return;
+          counts[loc] = (counts[loc] || 0) + 1;
+        });
+      });
+
+      const features = [];
+      for (const loc of Object.keys(counts)) {
+        const parsed = parseLocation(loc);
+        if (!parsed) continue;
+        const boundary = await fetchCityBoundary(parsed.city, parsed.state);
+        if (!boundary) continue;
+        features.push({
+          ...boundary,
+          properties: {
+            ...boundary.properties,
+            location: loc,
+            weight: counts[loc]
+          }
+        });
+      }
+
+      return { type: "FeatureCollection", features };
+    }
+
+    function getThemeColor() {
+      return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#b21f1f";
+    }
+
+    function toRgba(hex, alpha) {
+      const clean = hex.replace("#", "");
+      if (clean.length !== 6) return `rgba(178,31,31,${alpha})`;
+      const num = parseInt(clean, 16);
+      const r = (num >> 16) & 255;
+      const g = (num >> 8) & 255;
+      const b = num & 255;
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
+
+    function updateHeatmapColors() {
+      if (!heatmapMap || !heatmapMap.isStyleLoaded()) return;
+      const base = getThemeColor();
+      heatmapMap.setPaintProperty("heat-layer", "fill-color", [
+        "interpolate",
+        ["linear"],
+        ["get", "weight"],
+        1, toRgba(base, 0.15),
+        3, toRgba(base, 0.3),
+        6, toRgba(base, 0.5),
+        10, toRgba(base, 0.75),
+        20, toRgba(base, 0.95)
+      ]);
+      heatmapMap.setPaintProperty("heat-outline", "line-color", base);
+    }
+
+    function initHeatmap() {
+      if (!heatmapEl || heatmapMap) return;
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+      heatmapMap = new mapboxgl.Map({
+        container: "heatmap",
+        style: "mapbox://styles/mapbox/light-v11",
+        center: [-84.39, 33.75],
+        zoom: 8.3
+      });
+
+      heatmapMap.on("load", () => {
+        heatmapReady = true;
+        if (pendingHeatmapData) {
+          upsertHeatmapSource(pendingHeatmapData);
+          pendingHeatmapData = null;
+        }
+        updateHeatmapColors();
+        refreshHeatmap();
+      });
+    }
+
+    function upsertHeatmapSource(data) {
+      if (!heatmapMap.getSource(heatmapSourceId)) {
+        heatmapMap.addSource(heatmapSourceId, {
+          type: "geojson",
+          data
+        });
+
+        heatmapMap.addLayer({
+          id: "heat-layer",
+          type: "fill",
+          source: heatmapSourceId,
+          paint: {
+            "fill-color": [
+              "interpolate",
+              ["linear"],
+              ["get", "weight"],
+              1, toRgba(getThemeColor(), 0.15),
+              3, toRgba(getThemeColor(), 0.3),
+              6, toRgba(getThemeColor(), 0.5),
+              10, toRgba(getThemeColor(), 0.75),
+              20, toRgba(getThemeColor(), 0.95)
+            ],
+            "fill-opacity": 0.9
+          }
+        });
+
+        heatmapMap.addLayer({
+          id: "heat-outline",
+          type: "line",
+          source: heatmapSourceId,
+          paint: {
+            "line-color": getThemeColor(),
+            "line-width": 1.2
+          }
+        });
+      } else {
+        heatmapMap.getSource(heatmapSourceId).setData(data);
+      }
+    }
+
+    async function refreshHeatmap() {
+      if (!heatmapMap) return;
+      const data = await buildHeatmapData();
+      if (!heatmapReady) {
+        pendingHeatmapData = data;
+        return;
+      }
+      upsertHeatmapSource(data);
+      updateHeatmapColors();
     }
 
     function applyTheme(themeKey) {
@@ -755,6 +1054,7 @@
       const next = themes[themeKey] || themes.forest;
       document.documentElement.style.setProperty("--accent", next.accent);
       document.documentElement.style.setProperty("--accent-dark", next.accentDark);
+      updateHeatmapColors();
     }
 
 
@@ -813,6 +1113,31 @@
           <div class="muted">Total hours</div>
         `;
         summaryEl.appendChild(card);
+      });
+    }
+
+    function renderExperienceTotals() {
+      const totals = {};
+      Object.values(state).forEach(entries => {
+        entries.forEach(entry => {
+          const name = entry.category || "";
+          if (!name) return;
+          totals[name] = (totals[name] || 0) + (Number(entry.hours) || 0);
+        });
+      });
+
+      const rows = Object.entries(totals).sort((a, b) => b[1] - a[1]);
+      experienceTotalsEl.innerHTML = "";
+      if (rows.length === 0) {
+        experienceTotalsEl.innerHTML = '<div class="muted">No entries yet</div>';
+        return;
+      }
+
+      rows.forEach(([name, hours]) => {
+        const row = document.createElement("div");
+        row.className = "totals-row";
+        row.innerHTML = `<div>${name}</div><span>${hours % 1 === 0 ? hours : hours.toFixed(1)} hrs</span>`;
+        experienceTotalsEl.appendChild(row);
       });
     }
 
@@ -932,8 +1257,10 @@
 
       persistEntries();
       renderSummary();
+      renderExperienceTotals();
       renderLogHeader();
       renderLogTable();
+      refreshHeatmap();
       resetForm();
     }
 
@@ -958,8 +1285,10 @@
       if (originalIndex >= 0) state[activeTab].splice(originalIndex, 1);
       persistEntries();
       renderSummary();
+      renderExperienceTotals();
       renderLogHeader();
       renderLogTable();
+      refreshHeatmap();
     }
 
     function resetForm() {
@@ -999,10 +1328,12 @@
           persistEntries();
           persistSettings();
           renderSummary();
+          renderExperienceTotals();
           renderLogHeader();
           renderLogTable();
           renderExperienceOptions();
           renderExperienceRows();
+          refreshHeatmap();
         } catch {
           alert("Invalid JSON file.");
         }
@@ -1015,22 +1346,79 @@
       state = structuredClone(DEFAULT_DATA);
       persistEntries();
       renderSummary();
+      renderExperienceTotals();
       renderLogHeader();
       renderLogTable();
+      refreshHeatmap();
       resetForm();
     }
 
     function addExperienceRow(item = {}) {
       const tbody = document.getElementById("experience-rows");
       const row = document.createElement("tr");
+      row.className = "drag-row";
+      row.draggable = false;
       row.innerHTML = `
+        <td class="drag-cell"><span class="drag-handle" title="Drag to reorder" aria-hidden="true" draggable="true">⠿</span></td>
         <td><input type="text" value="${escapeHtml(item.name || "")}" /></td>
         <td><input type="text" value="${escapeHtml(item.location || "")}" /></td>
         <td><input type="text" value="${escapeHtml(item.info || "")}" /></td>
         <td><button class="link-btn" type="button">Remove</button></td>
       `;
-      row.querySelector("button").addEventListener("click", () => row.remove());
+      row.querySelector("button").addEventListener("click", () => {
+        row.remove();
+        scheduleSaveSettings();
+      });
       tbody.appendChild(row);
+    }
+
+    function enableExperienceDrag() {
+      const tbody = document.getElementById("experience-rows");
+      if (!tbody || tbody.dataset.dragReady === "true") return;
+      tbody.dataset.dragReady = "true";
+      let draggingRow = null;
+
+      tbody.addEventListener("dragstart", (event) => {
+        const handle = event.target.closest(".drag-handle");
+        if (!handle) {
+          event.preventDefault();
+          return;
+        }
+        draggingRow = handle.closest("tr");
+        if (!draggingRow) return;
+        draggingRow.classList.add("dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", "");
+      });
+
+      tbody.addEventListener("dragend", () => {
+        if (draggingRow) draggingRow.classList.remove("dragging");
+        draggingRow = null;
+        scheduleSaveSettings();
+      });
+
+      tbody.addEventListener("dragover", (event) => {
+        if (!draggingRow) return;
+        event.preventDefault();
+        const after = getDragAfterElement(tbody, event.clientY);
+        if (after == null) {
+          tbody.appendChild(draggingRow);
+        } else if (after !== draggingRow) {
+          tbody.insertBefore(draggingRow, after);
+        }
+      });
+    }
+
+    function getDragAfterElement(container, y) {
+      const rows = [...container.querySelectorAll("tr:not(.dragging)")];
+      return rows.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+          return { offset, element: child };
+        }
+        return closest;
+      }, { offset: Number.NEGATIVE_INFINITY, element: null }).element;
     }
 
     function renderExperienceRows() {
@@ -1058,6 +1446,13 @@
       applyTheme(settings.theme);
       renderExperienceOptions();
       renderLogTable();
+    }
+
+    function scheduleSaveSettings() {
+      clearTimeout(settingsSaveTimer);
+      settingsSaveTimer = setTimeout(() => {
+        saveSettings();
+      }, 300);
     }
 
     function toggleSort(key) {
@@ -1095,7 +1490,10 @@
 
     document.getElementById("add-row").addEventListener("click", () => addExperienceRow());
     document.getElementById("save-settings").addEventListener("click", saveSettings);
-    themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+    themeSelect.addEventListener("change", () => {
+      applyTheme(themeSelect.value);
+      scheduleSaveSettings();
+    });
     document.getElementById("export-btn").addEventListener("click", exportJson);
     document.getElementById("import-btn").addEventListener("click", () => document.getElementById("import-file").click());
     document.getElementById("import-file").addEventListener("change", (e) => {
@@ -1106,14 +1504,20 @@
     document.getElementById("clear-all").addEventListener("click", clearAllData);
 
     renderExperienceRows();
+    enableExperienceDrag();
     renderExperienceOptions();
+    document.getElementById("experience-rows").addEventListener("input", (event) => {
+      if (event.target.matches("input")) scheduleSaveSettings();
+    });
     themeSelect.value = settings.theme || "forest";
     applyTheme(themeSelect.value);
     renderSummary();
+    renderExperienceTotals();
     renderLogHeader();
     renderLogTable();
     updateSortButtons();
+    initHeatmap();
 
-    // TRIGGER CLOUD SYNC ON STARTUP
+    // TRIGGER AZURE SYNC ON STARTUP
     window.addEventListener('load', syncFromCloud);
   </script>
