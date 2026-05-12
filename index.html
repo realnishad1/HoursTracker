@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&family=Sora:wght@500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink: #1f2328;
+      --muted: #6b6f76;
+      --oat: #f6f7f6;
+      --paper: #ffffff;
+      --accent: #2f6f4e;
+      --accent-dark: #24553d;
+      --line: #e6e6e2;
+      --card: #ffffff;
+      --radius: 16px;
+      --radius-sm: 10px;
+      --shadow: 0 18px 40px rgba(18, 18, 18, 0.06);
+      --home-panel-height: 420px;
+    }
+
+    body {
+      font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(900px 650px at 10% -10%, #f0f3ef 0%, rgba(240,243,239,0) 60%),
+                  radial-gradient(900px 650px at 110% 0%, #eef1f6 0%, rgba(238,241,246,0) 55%),
+                  var(--oat);
+      min-height: 100vh;
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 18px 28px 4px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .tabs-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      background: transparent;
+      padding: 0;
+      cursor: pointer;
+      width: 24px;
+      height: 24px;
+    }
+
+    .tabs-toggle span {
+      width: 16px;
+      height: 2px;
+      background: var(--ink);
+      display: inline-block;
+      position: relative;
+    }
+
+    .tabs-toggle span::before,
+    .tabs-toggle span::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      width: 16px;
+      height: 2px;
+      background: var(--ink);
+    }
+
+    .tabs-toggle span::before { top: -5px; }
+    .tabs-toggle span::after { top: 5px; }
+
+    .tabs-toggle.open span {
+      background: transparent;
+    }
+
+    .tabs-toggle.open span::before {
+      top: 0;
+      transform: rotate(45deg);
+    }
+
+    .tabs-toggle.open span::after {
+      top: 0;
+      transform: rotate(-45deg);
+    }
+
+    .title {
+      font-family: "Sora", system-ui, sans-serif;
+      font-size: 20px;
+      letter-spacing: 0.02em;
+      justify-self: end;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      justify-self: end;
+    }
+
+    .chip {
+      font-size: 11px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--muted);
+    }
+
+    .tabs-bar {
+      padding: 0 28px 10px;
+      position: relative;
+      height: 0;
+    }
+
+    .tabs-row {
+      display: flex;
+      gap: 18px;
+      flex-wrap: nowrap;
+      align-items: center;
+      position: absolute;
+      left: 58px;
+      top: -28px;
+      max-width: 0;
+      opacity: 0;
+      transform: translateX(-14px);
+      overflow: hidden;
+      pointer-events: none;
+      transition: max-width 0.35s ease, opacity 0.25s ease, transform 0.35s ease;
+      z-index: 5;
+      white-space: nowrap;
+    }
+
+    .tabs-row.open {
+      max-width: 1200px;
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    .tab-link {
+      border: none;
+      background: transparent;
+      padding: 2px 0;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      cursor: pointer;
+      color: var(--ink);
+      text-transform: uppercase;
+      border-bottom: 2px solid transparent;
+    }
+
+    .tab-link.active {
+      color: var(--ink);
+      border-color: var(--ink);
+    }
+
+    main {
+      padding: 10px 28px 40px;
+      display: grid;
+      gap: 22px;
+      flex: 1;
+    }
+
+    .view {
+      display: none;
+      animation: viewFade 0.35s ease-out;
+    }
+
+    .view.active { display: block; }
+
+    @keyframes viewFade {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .home-grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: 1.1fr 1fr;
+      align-items: stretch;
+    }
+
+    .summary-grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-auto-rows: 1fr;
+      height: var(--home-panel-height);
+    }
+
+    .summary-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      padding: 22px;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    .summary-card h3 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      line-height: 1.1;
+    }
+
+    .summary-card .hours {
+      font-family: "Sora", system-ui, sans-serif;
+      font-size: 64px;
+      color: var(--accent-dark);
+      line-height: 1.05;
+    }
+
+    .summary-card .muted {
+      font-size: 16px;
+      line-height: 1.1;
+    }
+
+    .panel {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .panel.entry-panel {
+      height: var(--home-panel-height);
+      display: flex;
+      flex-direction: column;
+      padding: 14px 16px;
+    }
+
+    .entry-actions {
+      margin-top: auto;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .panel h4 {
+      font-family: "Sora", system-ui, sans-serif;
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
+    label {
+      font-size: 12px;
+      color: var(--muted);
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 8px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--line);
+      background: var(--paper);
+      font-size: 13px;
+      margin-bottom: 10px;
+      font-family: inherit;
+      color: var(--ink);
+    }
+
+    .entry-panel input,
+    .entry-panel select {
+      margin-bottom: 0;
+    }
+
+    .entry-panel .field {
+      display: grid;
+      gap: 3px;
+      margin-bottom: 6px;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+
+    .btn {
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+
+    .btn:hover { opacity: 0.9; }
+    .btn:active { transform: scale(0.98); }
+
+    .btn-primary {
+      background: var(--accent-dark);
+      color: #fff;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--muted);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      table-layout: fixed;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 8px 6px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    th { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: nowrap;
+    }
+
+    .logs-table th:nth-child(1),
+    .logs-table td:nth-child(1) { width: 12%; }
+    .logs-table th:nth-child(2),
+    .logs-table td:nth-child(2) { width: 16%; }
+    .logs-table th:nth-child(3),
+    .logs-table td:nth-child(3) { width: 10%; }
+    .logs-table th:nth-child(4),
+    .logs-table td:nth-child(4) { width: 14%; }
+    .logs-table th:nth-child(5),
+    .logs-table td:nth-child(5) { width: 18%; }
+    .logs-table th:nth-child(6),
+    .logs-table td:nth-child(6) { width: 20%; }
+    .logs-table th:nth-child(7),
+    .logs-table td:nth-child(7) { width: 10%; }
+
+    .logs-table td:nth-child(6) {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .logs-table td:last-child {
+      border-bottom: none;
+    }
+
+    .sort-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 12px;
+      margin-left: 6px;
+    }
+
+    .sort-btn.active {
+      color: var(--ink);
+    }
+
+    .link-btn {
+      background: none;
+      border: none;
+      color: var(--accent-dark);
+      cursor: pointer;
+      font-size: 12px;
+      padding: 0;
+      white-space: nowrap;
+      text-decoration: none;
+      box-shadow: none;
+    }
+
+    .link-btn:focus {
+      outline: none;
+    }
+
+    .muted { color: var(--muted); }
+
+    .empty {
+      text-align: center;
+      padding: 18px 0;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .log-header h2 {
+      font-family: "Sora", system-ui, sans-serif;
+      font-size: 18px;
+      margin-bottom: 2px;
+    }
+
+    .log-stats {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .log-pill {
+      border: 1px solid var(--line);
+      background: var(--paper);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .settings-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+
+    .settings-table th,
+    .settings-table td {
+      border-bottom: 1px solid var(--line);
+      padding: 8px 6px;
+      text-align: left;
+    }
+
+    .settings-table input {
+      margin-bottom: 0;
+      background: #fff;
+    }
+
+    @media (max-width: 980px) {
+      header, main, .tabs-bar { padding-left: 18px; padding-right: 18px; }
+      .home-grid { grid-template-columns: 1fr; }
+      .summary-grid { height: auto; grid-auto-rows: auto; }
+      .panel.entry-panel { height: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <button class="tabs-toggle" id="tabs-toggle" aria-label="Toggle tabs">
+        <span></span>
+      </button>
+      <div></div>
+      <div class="header-actions">
+        <span class="chip" id="last-saved">Local only</span>
+        <div class="title">Tracker</div>
+      </div>
+    </header>
+
+    <nav class="tabs-bar">
+      <div class="tabs-row" id="tabs-row">
+        <button class="tab-link active" data-view="home">Home</button>
+        <button class="tab-link" data-view="volunteer">Volunteering</button>
+        <button class="tab-link" data-view="shadow">Shadowing</button>
+        <button class="tab-link" data-view="research">Research</button>
+        <button class="tab-link" data-view="activities">Activities</button>
+        <button class="tab-link" data-view="settings">Settings</button>
+      </div>
+    </nav>
+
+    <main>
+      <section id="view-home" class="view active">
+        <div class="home-grid">
+          <div>
+            <div class="summary-grid" id="summary-hours"></div>
+          </div>
+          <div class="panel entry-panel">
+            <h4>Add entry</h4>
+            <div class="field">
+              <label for="log-type">Log type</label>
+              <select id="log-type">
+                <option value="volunteer">Volunteering</option>
+                <option value="shadow">Shadowing</option>
+                <option value="research">Research</option>
+                <option value="activities">Activities</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label for="log-date">Date</label>
+              <input type="date" id="log-date" />
+            </div>
+
+            <div class="field">
+              <label for="log-category">Experience name</label>
+              <select id="log-category"></select>
+            </div>
+
+            <div class="field">
+              <label for="log-hours">Hours</label>
+              <input type="number" step="0.25" id="log-hours" placeholder="2" />
+            </div>
+
+            <div class="field">
+              <label for="log-notes">Notes (optional)</label>
+              <input type="text" id="log-notes" placeholder="Assisted with intake" />
+            </div>
+
+            <div class="entry-actions">
+              <button class="btn btn-primary" id="save-entry">Save entry</button>
+              <button class="btn btn-ghost" id="cancel-edit" style="display:none;">Cancel edit</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="view-log" class="view">
+        <div class="panel">
+          <div class="log-header">
+            <div>
+              <h2 id="log-title">Volunteering</h2>
+              <div class="muted" id="log-subtitle"></div>
+            </div>
+            <div class="log-stats" id="log-stats"></div>
+          </div>
+          <table class="logs-table">
+            <thead>
+              <tr>
+                <th>
+                  Date
+                  <button class="sort-btn" id="sort-date" aria-label="Sort by date">⇅</button>
+                </th>
+                <th>
+                  Experience
+                  <button class="sort-btn" id="sort-exp" aria-label="Sort by experience">⇅</button>
+                </th>
+                <th>Hours</th>
+                <th>Location</th>
+                <th>Key info</th>
+                <th>Notes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="log-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="view-settings" class="view">
+        <div class="panel">
+          <h4>Settings</h4>
+          <div class="muted" style="margin-bottom:10px;">Experience list for all logs.</div>
+
+          <table class="settings-table" id="experience-table">
+            <thead>
+              <tr>
+                <th>Experience name</th>
+                <th>Location</th>
+                <th>Key info / description</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="experience-rows"></tbody>
+          </table>
+
+          <div class="field" style="margin-bottom:12px; max-width:260px;">
+            <label for="theme-select">Theme color</label>
+            <select id="theme-select">
+              <option value="forest">Forest</option>
+              <option value="red">Red</option>
+              <option value="navy">Navy</option>
+              <option value="rose">Rose</option>
+              <option value="teal">Teal</option>
+              <option value="olive">Olive</option>
+              <option value="plum">Plum</option>
+            </select>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-ghost" id="add-row">Add row</button>
+            <button class="btn btn-primary" id="save-settings">Save settings</button>
+            <button class="btn btn-ghost" id="export-btn">Export JSON</button>
+            <button class="btn btn-ghost" id="import-btn">Import JSON</button>
+            <button class="btn btn-ghost" id="clear-all">Clear all data</button>
+            <input type="file" id="import-file" accept="application/json" hidden />
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "tracker_entries_v3";
+    const SETTINGS_KEY = "tracker_settings_v3";
+
+    const LOG_LABELS = {
+      volunteer: "Volunteering",
+      shadow: "Shadowing",
+      research: "Research",
+      activities: "Activities"
+    };
+
+    const DEFAULT_DATA = {
+      volunteer: [],
+      shadow: [],
+      research: [],
+      activities: []
+    };
+
+    const DEFAULT_SETTINGS = {
+      experiences: [],
+      theme: "forest"
+    };
+
+    // --- AZURE INTEGRATION START ---
+    async function syncFromCloud() {
+      lastSavedEl.textContent = "Syncing...";
+      try {
+        const response = await fetch('/api/saveData');
+        if (response.ok) {
+          const cloudData = await response.json();
+          // Merge cloud data into local state
+          if (cloudData.entries) state = { ...structuredClone(DEFAULT_DATA), ...cloudData.entries };
+          if (cloudData.settings) settings = { ...structuredClone(DEFAULT_SETTINGS), ...cloudData.settings };
+          
+          // Re-render UI with cloud data
+          renderSummary();
+          renderLogHeader();
+          renderLogTable();
+          renderExperienceOptions();
+          renderExperienceRows();
+          applyTheme(settings.theme);
+          
+          lastSavedEl.textContent = "Cloud Synced";
+        }
+      } catch (err) {
+        lastSavedEl.textContent = "Offline Mode";
+        console.warn("Cloud sync failed, using local storage.", err);
+      }
+    }
+    // --- AZURE INTEGRATION END ---
+
+    let state = loadEntries();
+    let settings = loadSettings();
+    let activeTab = "volunteer";
+    let editIndex = null;
+    let sortState = { key: "date", dir: "desc" };
+
+    const lastSavedEl = document.getElementById("last-saved");
+    const logBodyEl = document.getElementById("log-body");
+    const summaryEl = document.getElementById("summary-hours");
+    const saveBtn = document.getElementById("save-entry");
+    const cancelEditBtn = document.getElementById("cancel-edit");
+    const logTitleEl = document.getElementById("log-title");
+    const logStatsEl = document.getElementById("log-stats");
+    const logTypeSelect = document.getElementById("log-type");
+    const logCategorySelect = document.getElementById("log-category");
+    const logSubtitle = document.getElementById("log-subtitle");
+    const tabsToggle = document.getElementById("tabs-toggle");
+    const tabsRow = document.getElementById("tabs-row");
+    const tabButtons = document.querySelectorAll(".tab-link");
+    const themeSelect = document.getElementById("theme-select");
+    const sortDateBtn = document.getElementById("sort-date");
+    const sortExpBtn = document.getElementById("sort-exp");
+
+    function loadEntries() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return structuredClone(DEFAULT_DATA);
+        const parsed = JSON.parse(raw);
+        return { ...structuredClone(DEFAULT_DATA), ...parsed };
+      } catch {
+        return structuredClone(DEFAULT_DATA);
+      }
+    }
+
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(SETTINGS_KEY);
+        if (!raw) return structuredClone(DEFAULT_SETTINGS);
+        const parsed = JSON.parse(raw);
+        return { ...structuredClone(DEFAULT_SETTINGS), ...parsed };
+      } catch {
+        return structuredClone(DEFAULT_SETTINGS);
+      }
+    }
+
+    // UPDATED FOR AZURE
+    async function persistEntries() {
+      // Keep local storage for backup
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      lastSavedEl.textContent = "Saving to Cloud...";
+
+      try {
+        await fetch('/api/saveData', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'entries', payload: state })
+        });
+        lastSavedEl.textContent = "Saved " + new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      } catch (err) {
+        lastSavedEl.textContent = "Saved locally (Offline)";
+      }
+    }
+
+    // UPDATED FOR AZURE
+    async function persistSettings() {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      try {
+        await fetch('/api/saveData', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'settings', payload: settings })
+        });
+      } catch (err) {
+        console.warn("Settings saved locally only.");
+      }
+    }
+
+    function applyTheme(themeKey) {
+      const themes = {
+        forest: { accent: "#2f6f4e", accentDark: "#24553d" },
+        red: { accent: "#b21f1f", accentDark: "#8f1818" },
+        navy: { accent: "#3a556f", accentDark: "#2a3d52" },
+        rose: { accent: "#b2606a", accentDark: "#8a4750" },
+        teal: { accent: "#2f6f6b", accentDark: "#1f4f4c" },
+        olive: { accent: "#6a7a3b", accentDark: "#4f5d2c" },
+        plum: { accent: "#6a4a7a", accentDark: "#4f365b" }
+      };
+      const next = themes[themeKey] || themes.forest;
+      document.documentElement.style.setProperty("--accent", next.accent);
+      document.documentElement.style.setProperty("--accent-dark", next.accentDark);
+    }
+
+
+    function fmtDate(value) {
+      if (!value) return "-";
+      const d = new Date(value + "T00:00:00");
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function toggleTabs(force) {
+      const isOpen = tabsRow.classList.contains("open");
+      const next = typeof force === "boolean" ? force : !isOpen;
+      tabsRow.classList.toggle("open", next);
+      tabsToggle.classList.toggle("open", next);
+    }
+
+    function showView(view) {
+      document.querySelectorAll(".view").forEach(section => section.classList.remove("active"));
+      tabButtons.forEach(tab => tab.classList.remove("active"));
+      const activeButton = Array.from(tabButtons).find(btn => btn.dataset.view === view);
+      if (activeButton) activeButton.classList.add("active");
+
+      if (view === "home") {
+        document.getElementById("view-home").classList.add("active");
+      } else if (view === "settings") {
+        document.getElementById("view-settings").classList.add("active");
+      } else {
+        activeTab = view;
+        logTypeSelect.value = activeTab;
+        document.getElementById("view-log").classList.add("active");
+        renderLogHeader();
+        renderLogTable();
+      }
+
+      toggleTabs(false);
+    }
+
+    function getStats(entries) {
+      const totalHours = entries.reduce((sum, e) => sum + (Number(e.hours) || 0), 0);
+      const sessions = entries.length;
+      const categories = new Set(entries.map(e => e.category.trim().toLowerCase())).size;
+      return { totalHours, sessions, categories };
+    }
+
+    function renderSummary() {
+      summaryEl.innerHTML = "";
+      Object.entries(LOG_LABELS).forEach(([key, label]) => {
+        const entries = state[key];
+        const { totalHours } = getStats(entries);
+
+        const card = document.createElement("div");
+        card.className = "summary-card";
+        card.innerHTML = `
+          <h3>${label}</h3>
+          <div class="hours">${totalHours.toFixed(totalHours % 1 === 0 ? 0 : 1)}</div>
+          <div class="muted">Total hours</div>
+        `;
+        summaryEl.appendChild(card);
+      });
+    }
+
+    function renderLogHeader() {
+      const entries = state[activeTab];
+      const { totalHours, sessions, categories } = getStats(entries);
+      logTitleEl.textContent = LOG_LABELS[activeTab];
+      logSubtitle.textContent = "";
+      logStatsEl.innerHTML = `
+        <span class="log-pill">${totalHours.toFixed(totalHours % 1 === 0 ? 0 : 1)} hrs</span>
+        <span class="log-pill">${sessions} sessions</span>
+        <span class="log-pill">${categories} categories</span>
+      `;
+    }
+
+    function applySort(entries) {
+      const list = [...entries];
+      if (sortState.key === "experience") {
+        list.sort((a, b) => a.category.localeCompare(b.category, undefined, { sensitivity: "base" }));
+      } else {
+        list.sort((a, b) => new Date(a.date) - new Date(b.date));
+      }
+      if (sortState.dir === "desc") list.reverse();
+      return list;
+    }
+
+    function updateSortButtons() {
+      sortDateBtn.classList.toggle("active", sortState.key === "date");
+      sortExpBtn.classList.toggle("active", sortState.key === "experience");
+    }
+
+    function renderLogTable() {
+      const entries = applySort(state[activeTab]);
+      logBodyEl.innerHTML = "";
+
+      if (entries.length === 0) {
+        const row = document.createElement("tr");
+        row.innerHTML = `<td colspan="7" class="empty">No entries yet</td>`;
+        logBodyEl.appendChild(row);
+        return;
+      }
+
+      entries.forEach((entry, index) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${fmtDate(entry.date)}</td>
+          <td>${escapeHtml(entry.category)}</td>
+          <td>${Number(entry.hours || 0).toFixed(entry.hours % 1 === 0 ? 0 : 1)}</td>
+          <td>${escapeHtml(entry.location || "-")}</td>
+          <td>${escapeHtml(entry.info || "-")}</td>
+          <td>${escapeHtml(entry.notes || "-")}</td>
+          <td class="actions">
+            <button class="link-btn" data-edit="${index}">Edit</button>
+            <button class="link-btn" data-delete="${index}">Delete</button>
+          </td>
+        `;
+        logBodyEl.appendChild(row);
+      });
+
+      logBodyEl.querySelectorAll("button[data-edit]").forEach(btn => {
+        btn.addEventListener("click", () => startEdit(Number(btn.dataset.edit)));
+      });
+
+      logBodyEl.querySelectorAll("button[data-delete]").forEach(btn => {
+        btn.addEventListener("click", () => deleteEntry(Number(btn.dataset.delete)));
+      });
+    }
+
+    function renderExperienceOptions() {
+      logCategorySelect.innerHTML = "";
+      const list = settings.experiences || [];
+      if (list.length === 0) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "Add experiences in Settings";
+        logCategorySelect.appendChild(opt);
+        return;
+      }
+      list.forEach(item => {
+        const opt = document.createElement("option");
+        opt.value = item.name;
+        opt.textContent = item.name;
+        logCategorySelect.appendChild(opt);
+      });
+    }
+
+    function saveEntry() {
+      const type = logTypeSelect.value;
+      const date = document.getElementById("log-date").value;
+      const category = logCategorySelect.value.trim();
+      const hours = parseFloat(document.getElementById("log-hours").value);
+      const notes = document.getElementById("log-notes").value.trim();
+
+      if (!date || !category || Number.isNaN(hours)) {
+        alert("Please fill in date, experience name, and hours.");
+        return;
+      }
+
+      const exp = (settings.experiences || []).find(item => item.name === category) || {};
+      const entry = {
+        date,
+        category,
+        hours,
+        notes,
+        location: exp.location || "",
+        info: exp.info || ""
+      };
+
+      if (editIndex !== null && activeTab === type) {
+        state[type][editIndex] = entry;
+        editIndex = null;
+        cancelEditBtn.style.display = "none";
+        saveBtn.textContent = "Save entry";
+      } else {
+        state[type].unshift(entry);
+      }
+
+      persistEntries();
+      renderSummary();
+      renderLogHeader();
+      renderLogTable();
+      resetForm();
+    }
+
+    function startEdit(index) {
+      const entry = applySort(state[activeTab])[index];
+      logTypeSelect.value = activeTab;
+      document.getElementById("log-date").value = entry.date;
+      logCategorySelect.value = entry.category;
+      document.getElementById("log-hours").value = entry.hours;
+      document.getElementById("log-notes").value = entry.notes || "";
+      editIndex = index;
+      cancelEditBtn.style.display = "inline-flex";
+      saveBtn.textContent = "Update entry";
+      showView("home");
+    }
+
+    function deleteEntry(index) {
+      if (!confirm("Delete this entry?")) return;
+      const sorted = applySort(state[activeTab]);
+      const target = sorted[index];
+      const originalIndex = state[activeTab].findIndex(entry => entry === target);
+      if (originalIndex >= 0) state[activeTab].splice(originalIndex, 1);
+      persistEntries();
+      renderSummary();
+      renderLogHeader();
+      renderLogTable();
+    }
+
+    function resetForm() {
+      document.getElementById("log-date").value = "";
+      document.getElementById("log-hours").value = "";
+      document.getElementById("log-notes").value = "";
+      renderExperienceOptions();
+    }
+
+    function escapeHtml(value) {
+      return (value || "").replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\"/g, "&quot;");
+    }
+
+    function exportJson() {
+      const payload = { entries: state, settings };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "tracker-data.json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function importJson(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          if (data.entries) state = { ...structuredClone(DEFAULT_DATA), ...data.entries };
+          if (data.settings) settings = { ...structuredClone(DEFAULT_SETTINGS), ...data.settings };
+          persistEntries();
+          persistSettings();
+          renderSummary();
+          renderLogHeader();
+          renderLogTable();
+          renderExperienceOptions();
+          renderExperienceRows();
+        } catch {
+          alert("Invalid JSON file.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function clearAllData() {
+      if (!confirm("Clear all local data? This cannot be undone.")) return;
+      state = structuredClone(DEFAULT_DATA);
+      persistEntries();
+      renderSummary();
+      renderLogHeader();
+      renderLogTable();
+      resetForm();
+    }
+
+    function addExperienceRow(item = {}) {
+      const tbody = document.getElementById("experience-rows");
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><input type="text" value="${escapeHtml(item.name || "")}" /></td>
+        <td><input type="text" value="${escapeHtml(item.location || "")}" /></td>
+        <td><input type="text" value="${escapeHtml(item.info || "")}" /></td>
+        <td><button class="link-btn" type="button">Remove</button></td>
+      `;
+      row.querySelector("button").addEventListener("click", () => row.remove());
+      tbody.appendChild(row);
+    }
+
+    function renderExperienceRows() {
+      const tbody = document.getElementById("experience-rows");
+      tbody.innerHTML = "";
+      if ((settings.experiences || []).length === 0) {
+        addExperienceRow();
+        return;
+      }
+      settings.experiences.forEach(item => addExperienceRow(item));
+    }
+
+    function saveSettings() {
+      const rows = Array.from(document.querySelectorAll("#experience-rows tr"));
+      settings.experiences = rows.map(row => {
+        const inputs = row.querySelectorAll("input");
+        return {
+          name: inputs[0].value.trim(),
+          location: inputs[1].value.trim(),
+          info: inputs[2].value.trim()
+        };
+      }).filter(item => item.name);
+      settings.theme = themeSelect.value;
+      persistSettings();
+      applyTheme(settings.theme);
+      renderExperienceOptions();
+      renderLogTable();
+    }
+
+    function toggleSort(key) {
+      if (sortState.key === key) {
+        sortState.dir = sortState.dir === "asc" ? "desc" : "asc";
+      } else {
+        sortState.key = key;
+        sortState.dir = "asc";
+      }
+      updateSortButtons();
+      renderLogTable();
+    }
+
+    tabsToggle.addEventListener("click", () => toggleTabs());
+    document.addEventListener("click", (event) => {
+      if (!document.querySelector(".tabs-bar").contains(event.target) && event.target !== tabsToggle) {
+        toggleTabs(false);
+      }
+    });
+
+    tabButtons.forEach(btn => {
+      btn.addEventListener("click", () => showView(btn.dataset.view));
+    });
+
+    sortDateBtn.addEventListener("click", () => toggleSort("date"));
+    sortExpBtn.addEventListener("click", () => toggleSort("experience"));
+
+    document.getElementById("save-entry").addEventListener("click", saveEntry);
+    cancelEditBtn.addEventListener("click", () => {
+      editIndex = null;
+      cancelEditBtn.style.display = "none";
+      saveBtn.textContent = "Save entry";
+      resetForm();
+    });
+
+    document.getElementById("add-row").addEventListener("click", () => addExperienceRow());
+    document.getElementById("save-settings").addEventListener("click", saveSettings);
+    themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+    document.getElementById("export-btn").addEventListener("click", exportJson);
+    document.getElementById("import-btn").addEventListener("click", () => document.getElementById("import-file").click());
+    document.getElementById("import-file").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) importJson(file);
+      e.target.value = "";
+    });
+    document.getElementById("clear-all").addEventListener("click", clearAllData);
+
+    renderExperienceRows();
+    renderExperienceOptions();
+    themeSelect.value = settings.theme || "forest";
+    applyTheme(themeSelect.value);
+    renderSummary();
+    renderLogHeader();
+    renderLogTable();
+    updateSortButtons();
+
+    // TRIGGER CLOUD SYNC ON STARTUP
+    window.addEventListener('load', syncFromCloud);
+  </script>
