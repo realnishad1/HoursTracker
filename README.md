@@ -32,6 +32,7 @@ To deploy this application successfully:
 ## Webpage Capture
 <img width="2870" height="1536" alt="image" src="https://github.com/user-attachments/assets/5ae4dfaa-f60a-457f-ae13-e8005b6651ec" />
 
+
 > [!NOTE]
 > _This project incorporates AI-generated elements that have been reviewed and human-confirmed by me._
 
