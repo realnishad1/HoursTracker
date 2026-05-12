@@ -29,12 +29,12 @@ To deploy this application successfully:
 
 3. Define the [AZURE_STORAGE_CONNECTION_STRING] within the Environment Variables section of the Azure Static Web App configuration.
 
+> [!NOTE]
+> _This project incorporates AI-generated elements that have been reviewed and human-confirmed by me._
+
 ## Webpage Capture
 <img width="2870" height="1536" alt="image" src="https://github.com/user-attachments/assets/5ae4dfaa-f60a-457f-ae13-e8005b6651ec" />
 
-
-> [!NOTE]
-> _This project incorporates AI-generated elements that have been reviewed and human-confirmed by me._
 
 ## Repository Structure
 
