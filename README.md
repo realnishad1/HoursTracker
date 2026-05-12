@@ -32,6 +32,9 @@ To deploy this application successfully:
 > [!NOTE]
 > _This project incorporates AI-generated elements that have been reviewed and human-confirmed by me._
 
+<img width="2880" height="1557" alt="image" src="https://github.com/user-attachments/assets/002c4ac9-0c05-4ae7-b981-37c0b9188f3d" />
+
+
 ## Repository Structure
 
 ```text
